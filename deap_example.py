@@ -363,7 +363,6 @@ if __name__ == "__main__":
     with open("seleted_network.json", "r") as jsfile:
         selected_network = json.load(jsfile)
     
-    import pdb ; pdb.set_trace()
 
     for idx in tqdm.tqdm(selected_network):
         print(f"Network index: {idx}")
