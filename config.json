@@ -1,5 +1,5 @@
 {
-    "dataset": ["cifar10"],
+    "dataset": ["cifar10","cifar100"],
     "edgegpu_latency": 0.0001,
     "edgegpu_energy": 24.226614330768584,
     "raspi4_latency": 10.481976820010459,
