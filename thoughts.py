@@ -7,10 +7,11 @@ from torch.nn import functional as F
 import tqdm
 import hiddenlayer as hl
 from torchsummary import summary
-import multiprocessing 
+import multiprocessing
 import netron
 from torch.utils.tensorboard import SummaryWriter
 from graphviz import Digraph
+
 
 class resnet18(nn.Module):
     def __init__(self):
@@ -77,7 +78,7 @@ class resnet18(nn.Module):
         x = self.layer3(x)  # 7
         x = self.layer4(x)  # 4
         x = self.avgpool(x)
-        
+
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
@@ -100,7 +101,9 @@ def change_model_kernel(model, kernel_size=3):
             conv_output_size = (
                 m.in_channels - kernel_size + 2 * m.padding[0]
             ) // m.stride[0] + 1
-            m.out_channels = m.out_channels * conv_output_size * conv_output_size // m.in_channels
+            m.out_channels = (
+                m.out_channels * conv_output_size * conv_output_size // m.in_channels
+            )
         elif isinstance(m, nn.Linear):
             # Recalculate input size for linear layers
             m.in_features = (
@@ -108,19 +111,23 @@ def change_model_kernel(model, kernel_size=3):
             )
     return model
 
-def plot_model(model,name, input_shape):
-    dot = Digraph(comment='Model Architecture')
-    dot.attr('node', shape='box')
-    dot.node('input', f'Input\n{input_shape}')
+
+def plot_model(model, name, input_shape):
+    dot = Digraph(comment="Model Architecture")
+    dot.attr("node", shape="box")
+    dot.node("input", f"Input\n{input_shape}")
     for name, module in model.named_modules():
         if isinstance(module, nn.Conv2d):
-            dot.node(name, f'Conv2d\n{module.kernel_size[0]}x{module.kernel_size[1]}\n{module.out_channels} filters')
+            dot.node(
+                name,
+                f"Conv2d\n{module.kernel_size[0]}x{module.kernel_size[1]}\n{module.out_channels} filters",
+            )
         elif isinstance(module, nn.Linear):
-            dot.node(name, f'Linear\n{module.in_features}x{module.out_features}')
+            dot.node(name, f"Linear\n{module.in_features}x{module.out_features}")
         elif isinstance(module, nn.BatchNorm2d):
-            dot.node(name, 'BatchNorm2d')
+            dot.node(name, "BatchNorm2d")
         elif isinstance(module, nn.ReLU):
-            dot.node(name, 'ReLU')
+            dot.node(name, "ReLU")
         else:
             dot.node(name, str(module))
 
@@ -134,48 +141,52 @@ def plot_model(model,name, input_shape):
                 if module2 == module:
                     dot.edge(name2, name)
 
-    dot.edge('input', 'conv1')
-    dot.format = 'pdf'
+    dot.edge("input", "conv1")
+    dot.format = "pdf"
 
     dot.render(name, view=True)
 
+
 def start_netron(model_path):
-        netron.start(model_path)
+    netron.start(model_path)
+
 
 if __name__ == "__main__":
     # Modify the model kernel size
-    writer1=SummaryWriter("runs/exp1")
-    writer2=SummaryWriter("runs/exp2")
-    device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    writer1 = SummaryWriter("runs/exp1")
+    writer2 = SummaryWriter("runs/exp2")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = ptcv_get_model("resnet18", pretrained=True)
     model1 = resnet18().to(device)
     num_kernels = number_of_kernel(model)
     print("Number of kernels: ", num_kernels)
 
     update_model = change_model_kernel(model, kernel_size=7)
-    import pdb ;pdb.set_trace()
-    
+    import pdb
+
+    pdb.set_trace()
+
     input = torch.randn(1, 3, 224, 224).to(device)
     output = model1(input)
     output2 = update_model(input)
-    writer1.add_graph(model,input)
-    writer2.add_graph(update_model,input)
-    
+    writer1.add_graph(model, input)
+    writer2.add_graph(update_model, input)
+
     writer1.close()
     writer2.close()
-    #plot_model(model1,"basic_model" ,input.shape)
-    #plot_model(update_model,"updated_model", input.shape)
-    #import pdb; pdb.set_trace()
-    #graph = hl.build_graph(model, torch.zeros([1, 3, 224, 224]))
-    #graph.theme = hl.graph.THEMES["blue"].copy()
-    #graph.save("model_graph", format="png")
+    # plot_model(model1,"basic_model" ,input.shape)
+    # plot_model(update_model,"updated_model", input.shape)
+    # import pdb; pdb.set_trace()
+    # graph = hl.build_graph(model, torch.zeros([1, 3, 224, 224]))
+    # graph.theme = hl.graph.THEMES["blue"].copy()
+    # graph.save("model_graph", format="png")
 
     graph1 = make_dot(output, params=dict(model.named_parameters()))
-    graph1.format = 'pdf'
-    graph1.render('ResNet18', cleanup=True)
+    graph1.format = "pdf"
+    graph1.render("ResNet18", cleanup=True)
     graph2 = make_dot(output2, params=dict(model.named_parameters()))
-    graph2.format = 'pdf'
-    graph2.render('ResNet18_updated', cleanup=True)
+    graph2.format = "pdf"
+    graph2.render("ResNet18_updated", cleanup=True)
     summary(model1, (3, 224, 224))
     summary(update_model, (3, 224, 224))
     traced_script_module1 = torch.jit.trace(model1, input)
@@ -184,13 +195,10 @@ if __name__ == "__main__":
     traced_script_module2 = torch.jit.trace(update_model, input)
     traced_script_module2.save("traced_model2.pt")
 
-
     p1 = multiprocessing.Process(target=start_netron, args=("traced_model1.pt",))
     p2 = multiprocessing.Process(target=start_netron, args=("traced_model2.pt",))
 
     p1.start()
     p2.start()
 
-  
     # Recalculate the number of output and input sizes for the model's other layers
-

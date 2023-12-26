@@ -29,16 +29,17 @@ from torch.utils.tensorboard import SummaryWriter
 import ffcv.fields as fields
 import ffcv.fields.decoders as decoders
 import ffcv.transforms as transforms
+
 writer = SummaryWriter("runs/HWNASBench")
 hw_api = HWAPI("HW-NAS-Bench-v1_0.pickle", search_space="nasbench201")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-data={}
+data = {}
 DATA_DIR = "./data"
 
 NUM_CLASSES = 10
 CIFAR_MEAN = [0.485, 0.456, 0.406]
 CIFAR_STD = [0.229, 0.224, 0.225]
-iteration=0
+iteration = 0
 BATCH_SIZE = 512
 NUM_WORKERS = 8
 # Loss function and optimizer
@@ -112,12 +113,14 @@ test_loader = ffcv.loader.Loader(
     pipelines={"image": test_image_pipeline, "label": label_pipeline},
 )
 
-def plot_histogram(fpga_energy_values,label,name):
+
+def plot_histogram(fpga_energy_values, label, name):
     plt.hist(fpga_energy_values, bins=20)
     plt.xlabel(label)
     plt.ylabel("Frequency")
-    plt.title("Histogram of FPGA"+label)
+    plt.title("Histogram of FPGA" + label)
     plt.savefig(name)
+
 
 def calculate_fitness(model, sparsity_list=[0.10] * 2):
     idx_l = 0
@@ -148,8 +151,9 @@ def calculate_fitness(model, sparsity_list=[0.10] * 2):
     # calculate validation accuracy
     return (total_speedup) / macs
 
+
 def change_model_kernel(model, sparcity_list):
-    count=0
+    count = 0
     for name, m in tqdm.tqdm(model.named_modules()):
         if isinstance(m, nn.Conv2d):
             # Modify the kernel size of the convolutional layer
@@ -158,23 +162,28 @@ def change_model_kernel(model, sparcity_list):
             conv_output_size = (
                 m.in_channels - sparcity_list[count] + 2 * m.padding[0]
             ) // m.stride[0] + 1
-            m.out_channels = m.out_channels * conv_output_size * conv_output_size // m.in_channels
+            m.out_channels = (
+                m.out_channels * conv_output_size * conv_output_size // m.in_channels
+            )
         elif isinstance(m, nn.Linear):
             # Recalculate input size for linear layers
             m.in_features = (
                 conv_output_size * conv_output_size * m.in_features // m.in_features
             )
-            count+=1
+            count += 1
         else:
             pass
     return model
+
 
 def scatter_plot(fpga_energy_values, fpga_latency_values):
     plt.plot(fpga_energy_values, fpga_latency_values)
     plt.xlabel("FPGA Energy")
     plt.ylabel("FPGA Latency")
     plt.title("LIne Plot of FPGA Energy and FPGA Latency")
-    plt.savefig("Line.png")                                                    
+    plt.savefig("Line.png")
+
+
 def count_conv2d_and_linear_layers(model):
     """Counts the number of convolutional and linear layers in a PyTorch model.
 
@@ -192,7 +201,7 @@ def count_conv2d_and_linear_layers(model):
         elif isinstance(module, torch.nn.Linear):
             num_linear_layers += 1
     return num_conv2d_layers + num_linear_layers
-                        
+
 
 def train(model, train_loader, criterion, optimizer, device):
     model.train()
@@ -231,11 +240,12 @@ def validate(model, val_loader, criterion, device):
             _, predicted = torch.max(outputs[0], 1)
             correct_preds += (predicted == labels).sum().item()
             total_samples += labels.size(0)
-    
+
     val_loss = running_loss / len(val_loader)
     val_accuracy = correct_preds / total_samples
 
     return val_loss, val_accuracy
+
 
 def convert_tensor_to_list(tensor):
     """Convert a PyTorch Tensor to a nested list."""
@@ -243,11 +253,14 @@ def convert_tensor_to_list(tensor):
         return tensor.item()
     return [convert_tensor_to_list(x) for x in tensor]
 
+
 def normalize(x):
-    min_value=min(x)
-    max_value=max(x)
-    normalized = [(float(i)-min_value)/(max_value-min_value) for i in x]
+    min_value = min(x)
+    max_value = max(x)
+    normalized = [(float(i) - min_value) / (max_value - min_value) for i in x]
     return normalized
+
+
 def append_to_json_file(
     param1, param2, param3, param4, param5, file_path="logging.json"
 ):
@@ -285,9 +298,8 @@ def append_to_json_file(
     with open(file_path, "w") as file:
         json.dump(existing_data, file, indent=2)
 
+
 def evaluateModel(sparcity_list):
-
-
     # optimization function
     global iteration
     iteration += 1
@@ -308,7 +320,9 @@ def evaluateModel(sparcity_list):
         train_loss, t_model = train(
             customize_model, train_loader, criterion, optimizer, device
         )
-        val_loss, val_accuracy = validate(customize_model, test_loader, criterion, device)
+        val_loss, val_accuracy = validate(
+            customize_model, test_loader, criterion, device
+        )
 
         print(
             f"Epoch {epoch + 1}/{num_epochs} => "
@@ -329,10 +343,13 @@ def evaluateModel(sparcity_list):
             train_loss, fitness_scr, val_accuracy, val_loss, normalize(sparcity_list)
         )
 
-    return ( fitness_scr,train_loss, val_loss, val_accuracy)
+    return (fitness_scr, train_loss, val_loss, val_accuracy)
 
-population_size =100
+
+population_size = 100
 Num_process = 8
+
+
 def modify_model_kernel(model, kernel_sizes):
     # Function to modify kernel size for all convolutional layers
     kernel_sizes_iter = iter(kernel_sizes)
@@ -344,12 +361,14 @@ def modify_model_kernel(model, kernel_sizes):
                 break
     return model
 
+
 def calculate_output_size(input_size, kernel_size, stride, padding):
     # Function to calculate the output size of a convolutional layer
     return ((input_size - kernel_size + 2 * padding) // stride) + 1
-       
+
+
 if __name__ == "__main__":
-    #Example to get all the hardware metrics in the No.0,1,2 architectures under NAS-Bench-201's Space
+    # Example to get all the hardware metrics in the No.0,1,2 architectures under NAS-Bench-201's Space
     creator.create("FitnessMulti", base.Fitness, weights=(1.0, -1.0, -1.0, 1.0))
     creator.create("Individual", list, fitness=creator.FitnessMulti)
 
@@ -362,7 +381,6 @@ if __name__ == "__main__":
     toolbox.register("select", tools.selTournament, tournsize=4)
     with open("seleted_network.json", "r") as jsfile:
         selected_network = json.load(jsfile)
-    
 
     for idx in tqdm.tqdm(selected_network):
         print(f"Network index: {idx}")
@@ -372,40 +390,40 @@ if __name__ == "__main__":
             # # latency_list.append(HW_metrics["fpga_latency"])
             # if HW_metrics["fpga_energy"]>7.6674888908800005:
             config = hw_api.get_net_config(idx, dataset)
-            network = get_cell_based_tiny_net(config) # create the network from configurration
-                # data["engery"]=engery_list
-                # data["latency"]=latency_list
-                # plot_histogram(data["engery"],label="fpga_energy",name="energy.png")
-                # plot_histogram(data["latency"],label="fpga_latency",name="latency.png")
-                # scatter_plot(engery_list,latency_list)
-            iteration+10
-            No_cromo=count_conv2d_and_linear_layers(network)
+            network = get_cell_based_tiny_net(
+                config
+            )  # create the network from configurration
+            # data["engery"]=engery_list
+            # data["latency"]=latency_list
+            # plot_histogram(data["engery"],label="fpga_energy",name="energy.png")
+            # plot_histogram(data["latency"],label="fpga_latency",name="latency.png")
+            # scatter_plot(engery_list,latency_list)
+            iteration + 10
+            No_cromo = count_conv2d_and_linear_layers(network)
             print(
-                    f"No of cromosomes {No_cromo}"
+                f"No of cromosomes {No_cromo}"
             )  # (fitness_scr,train_loss, val_loss, val_accuracy)
-    	        # total genes  list of list
+            # total genes  list of list
             toolbox.register(
-                    "individual",
-                    tools.initRepeat,
-                    creator.Individual,
-                    toolbox.attr_bool,
-                    n=No_cromo,
-                )
+                "individual",
+                tools.initRepeat,
+                creator.Individual,
+                toolbox.attr_bool,
+                n=No_cromo,
+            )
             toolbox.register("population", tools.initRepeat, list, toolbox.individual)
             population = toolbox.population(n=population_size)
-
-
 
             NGEN = 10
             for gen in range(NGEN):
                 starttime = time.time()
                 offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.1)
-                #offspring = [[float(gene) for gene in ind] for ind in offspring]
+                # offspring = [[float(gene) for gene in ind] for ind in offspring]
                 # offspring_tensors = [torch.tensor(individual) for individual in offspring]
 
                 # # Move offspring tensors to the same device as the model
                 # offspring_tensors = [tensor.to(device) for tensor in offspring_tensors]
-                            
+
                 fits = toolbox.map(toolbox.evaluate, offspring)
 
                 endtime = time.time() - starttime
