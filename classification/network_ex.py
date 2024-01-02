@@ -41,7 +41,6 @@ if __name__=="__main__":
     api = API('NAS-Bench-201-v1_0-e61699.pth', verbose=False)
 # The default path for benchmark file is '{:}/{:}'.format(os.environ['TORCH_HOME'], 'NAS-Bench-201-v1_1-096897.pth')
     config  = api.get_net_config(128, 'cifar10-valid')#
-    import pdb; pdb.set_trace()
     light_model=make_model(index=128,data_set="cifar10")
  # obtain the network configuration for the 123-th architecture on the CIFAR-10 dataset
     network = get_cell_based_tiny_net(config) # create the network from configurration#
