@@ -8,11 +8,11 @@
     "eyeriss_latency": 3.645620000000001,
     "eyeriss_energy": 0.6872827644999999,
     "eyeriss_arithmetic_intensity": 6.289297634665844,
-    "fpga_latency": 4.72496 ,
+    "fpga_latency": 6.00,
     "fpga_energy": 18.01072,
     "average_hw_metric": 591005.8676719831,
-    "train_accuracy": 0.99998,
+    "train_accuracy": 0.90,
     "train_loss": 0.000000,
-    "validation_accuracy": 0.098,
+    "validation_accuracy": 0.95,
     "validation_loss": 0.000000
 }

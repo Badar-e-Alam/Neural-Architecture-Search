@@ -25,7 +25,7 @@ print(
     "===> Example to get all the hardware metrics in the No.0,1,2 architectures under NAS-Bench-201's Space"
 )
 latency_list = []
-low_latency = 0.0
+low_latency = 2.0
 val_acc = []
 dataset_list = ["cifar10", "cifar100", "ImageNet16-120"]
 metrics_dict = {dataset_name: {} for dataset_name in dataset_list}
@@ -38,16 +38,19 @@ for idx in tqdm.tqdm(range(15625)):
         latency_list.append(HW_metrics["fpga_latency"])
         val_acc.append(validation_accuracy)
         if (
-            low_latency <= HW_metrics["fpga_latency"] <= config["fpga_latency"]
+            HW_metrics["fpga_latency"] > config["fpga_latency"]
             and validation_accuracy > config["validation_accuracy"]
         ):
             metrics_dict[dataset][idx] = {
                 "fpga_latency": HW_metrics["fpga_latency"],
                 "accuracy": validation_accuracy,
             }
+            import pdb ; pdb.set_trace()
             # print("HW_metrics (type: {}) for No.{} @ {} under NAS-Bench-201: {}".format(type(HW_metrics), idx, dataset, HW_metrics["fpga_energy"]))
 
-print(f"median latency {sorted(latency_list)[len(latency_list)//2]} median acc {sorted(val_acc)[len(val_acc)//2]}")
+print(
+    f"median latency {sorted(latency_list)[len(latency_list)//2]} median acc {sorted(val_acc)[len(val_acc)//2]}"
+)
 # print(f"mean latency {sum(latency_list)/len(latency_list)} max latency {max(latency_list)} min latency {min(latency_list)} mean val_acc {sum(val_acc)/len(val_acc)} max val_acc {max(val_acc)} min val_acc {min(val_acc)}")
 
 write_json("metrics.json", metrics_dict)

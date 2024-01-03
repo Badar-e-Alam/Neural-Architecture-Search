@@ -26,25 +26,6 @@ from utils.model import Net
 from utils.utils import str2bool, AverageMeter
 from utils.utils import str2bool, AverageMeter
 
-# writer = SummaryWriter("runs/medmnist_experiment_3")
-
-# hw_api = HWAPI("HW-NAS-Bench-v1_0.pickle", search_space="nasbench201")
-# with open("seleted_network.json", "r") as jsfile:
-#     selected_network = json.load(jsfile)
-
-
-# # for idx in tqdm.tqdm(selected_network):
-# #         print(f"Network index: {idx}")
-# #         for dataset in ["cifar10"]:
-# #             # HW_metrics = hw_api.query_by_index(idx, dataset)
-# # # engery_list.append(HW_metrics["fpga_energy"])
-# # # latency_list.append(HW_metrics["fpga_latency"])
-# # if HW_metrics["fpga_energy"]>7.6674888908800005:
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# config = hw_api.get_net_config(selected_network[-2], "cifar10")
-# single_network = get_cell_based_tiny_net(config)
-
-
 ##loading dataset
 class EarlyStopping:
     def __init__(self, patience=2, min_delta=0):
@@ -69,196 +50,8 @@ class EarlyStopping:
             self.counter = 0
 
 
-# train_loader = data.DataLoader(
-#     dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True
-# )
-# train_loader_at_eval = data.DataLoader(
-#     dataset=pil_dataset, batch_size=BATCH_SIZE, shuffle=False
-# )
-# test_loader = data.DataLoader(
-#     dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False
-# )
 
-
-# print(train_dataset)
-# print("===================")
-# print(test_dataset)
-
-# defining the model
-
-
-# define loss function and optimizer
-# early_stopping = EarlyStopping(patience=10, min_delta=0.01)
-
-
-# def train(epoch, model, optimizer, criterion, train_loader):
-#     print(f"Training loop: {epoch}")
-#     model.train()
-#     for batch_idx, (data, target) in tqdm.tqdm(enumerate(train_loader)):
-#         data, target = data.to(device), target.to(device)
-#         optimizer.zero_grad()
-#         output = model(data)
-#         loss = criterion(output, target.squeeze().long())
-#         loss.backward()
-#         optimizer.step()
-#         if batch_idx % 100 == 0:
-#             print(
-#                 f"Train Epoch: {epoch} [{batch_idx*len(data)}/{len(train_loader.dataset)} ({100.*batch_idx/len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}"
-#             )
-#             print("Learning rate: {}".format(optimizer.param_groups[0]["lr"]))
-#             writer.add_scalar(
-#                 "learning rate",
-#                 optimizer.param_groups[0]["lr"],
-#                 epoch,
-#             )
-#             writer.add_scalar(
-#                 "training loss",
-#                 loss.item(),
-#                 epoch,
-#             )
-#     if epoch % 5 == 0:
-#         torch.save(model.state_dict(), "model.pth")
-
-
-# def test(epoch, model, criterion, test_loader, split):
-#     print(f"Testing loop: {epoch}")
-#     model.eval()
-#     test_loss = 0
-#     correct = 0
-#     # if split == 'train':
-#     #     total_samples = len(train_loader_at_eval)
-#     #     test_loader = train_loader_at_eval
-#     # else:
-#     total_samples = len(test_loader.dataset)
-
-#     with torch.no_grad():
-#         for batch_idx, (data, target) in tqdm.tqdm(enumerate(test_loader)):
-#             data, target = data.to(device), target.to(device)
-#             output = model(data)
-#             test_loss += criterion(output, target.squeeze().long()).item()
-#             _, predicted_classes = torch.max(output, 1)
-
-#             # Assuming target is a 2D tensor, squeeze it to make it 1D if needed
-#             target = target.squeeze()
-
-#             # Compare predictions with ground truth
-#             correct_predictions = (predicted_classes == target).sum().item()
-#             correct += correct_predictions
-
-#         # Calculate accuracy after processing all batches
-
-#         accuracy = correct / total_samples
-
-#         print(f"Total Accuracy: {accuracy * 100:.2f}%")
-
-#         # Calculate average test loss
-#         test_loss /= total_samples
-#         print(f"\nTest set: Average loss: {test_loss:.4f}, Accuracy {accuracy}\n")
-
-#         # Add to Tensorboard
-#         writer.add_scalar("test loss", test_loss, epoch)
-#         writer.add_scalar("test accuracy", 100.0 * accuracy, epoch)
-#         return test_loss, accuracy
-
-
-# model = Net(single_network, dropout_enabled=True)
-# model.to(device)
-# criterion = nn.CrossEntropyLoss()
-
-# def objetives(trial):
-
-#    BATCH_SIZE = trial.suggest_categorical("BATCH_SIZE", [32, 64, 128, 256, 512])
-#    lr = trial.suggest_categorical("lr", [0.00001, 0.0001, 0.001, 0.01, 0.1])
-# #    stem_size = trial.suggest_categorical("step_size", [16, 32, 64, 128, 256])
-#    optimizer = optim.Adam(model.parameters(), lr=lr)
-
-#    train_loader = data.DataLoader(
-#         dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True
-#     )
-
-#    train_loader_at_eval = data.DataLoader(
-#         dataset=pil_dataset, batch_size=BATCH_SIZE, shuffle=False
-#     )
-#    test_loader = data.DataLoader(
-#         dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False
-#     )
-
-#    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#    print(f"couda is available: {device}")
-#    print(f"training is starting")
-#    for epoch in range(NUM_EPOCHS):
-#         train(epoch + 1, model, optimizer, criterion, train_loader)
-#         test_loss, acc = test(epoch + 1, model, criterion, test_loader, split="test")
-#         return acc
-#     # early_stopping(test_loss)
-#     # if early_stopping.stop:
-#     #     print("Early stopping")
-#     #     torch.save(model.state_dict(), 'model.pth')
-#     #     break
-# # for epoch in range(NUM_EPOCHS):
-# #     train_correct = 0
-#     train_total = 0
-#     test_correct = 0
-#     test_total = 0
-
-#     model.train()
-#     for index,(inputs, targets) in tqdm.tqdm(enumerate(train_loader)):
-#         # forward + backward + optimize
-#         optimizer.zero_grad()
-#         outputs = model(inputs)
-
-#         if task == 'multi-label, binary-class':
-#             targets = targets.to(torch.float32)
-#             loss = criterion(outputs, targets)
-#         else:
-#             targets = targets.squeeze().long()
-#             loss = criterion(outputs[1], targets)
-#         loss.backward()
-#         optimizer.step()
-
-#         if index % 100 == 0:
-#             print('[%d, %5d] loss: %.3f' % (epoch + 1, index + 1, loss.item()))
-#     torch.save(model.state_dict(), 'model.pth')
-#     writer.add_scalar('training loss', loss.item(), epoch)
-
-
-# # evaluation
-
-# def test(split):
-#     model.eval()
-#     y_true = torch.tensor([])
-#     y_score = torch.tensor([])
-
-#     data_loader = train_loader_at_eval if split == 'train' else test_loader
-
-#     with torch.no_grad():
-#         for inputs, targets in data_loader:
-#             outputs = model(inputs)
-
-#             if task == 'multi-label, binary-class':
-#                 targets = targets.to(torch.float32)
-#                 outputs = outputs[1].softmax(dim=-1)
-#             else:
-#                 targets = targets.squeeze().long()
-#                 outputs = outputs[1].softmax(dim=-1)
-#                 targets = targets.float().resize_(len(targets), 1)
-
-#             y_true = torch.cat((y_true, targets), 0)
-#             y_score = torch.cat((y_score, outputs), 0)
-
-#         y_true = y_true.numpy()
-#         y_score = y_score.detach().numpy()
-#         import pdb; pdb.set_trace()
-#         evaluator = Evaluator(data_flag, split)
-#         metrics = evaluator.evaluate(y_score)
-
-#         print('%s  auc: %.3f  acc:%.3f' % (split, *metrics))
-
-
-# print('==> Evaluating ...')
-# test('train')
-# test('test')
-best_accuracy = 0.0  #
+best_accuracy = 0.0
 
 parser = argparse.ArgumentParser(description="Hyperparameter tuning")
 parser.add_argument("-b", "--batch_size", type=int, default=256, help="batch size")
@@ -358,10 +151,7 @@ def evaluate(net, dataloader, mode, trial_num, criterion):
     net.eval()
     test_loss = 0
     correct = 0
-    # if split == 'train':
-    #     total_samples = len(train_loader_at_eval)
-    #     test_loader = train_loader_at_eval
-    # else:
+
     total_samples = len(test_loader.dataset)
 
     with torch.no_grad():
@@ -381,37 +171,10 @@ def evaluate(net, dataloader, mode, trial_num, criterion):
 
         accuracy = correct / total_samples
 
+
         print(f"Total Accuracy: {accuracy * 100:.2f}%")
-    # correct = 0
-    # total = 0
-    # class_correct = list(0.0 for i in range(10))
-    # class_total = list(0.0 for i in range(10))
 
-    # with torch.no_grad():
-    #     for data in dataloader:
-    #         images, labels = data
-    #         labels=labels.to(device)
-    #         outputs = net(images.to(device))
-    #         _, predicted = torch.max(outputs.to(device).data, 1)
-    #         total += labels.size(0)
-    #         correct += (predicted == labels).sum().item()
-    #         # c = (predicted == labels).squeeze()
-    #         # # for i in range(4):
-    #         # #     label = labels[i]
-    #         # #     class_correct[label] += c[i].item()
-    #         # #     class_total[label] += 1
-
-    # import pdb; pdb.set_trace()
-    # accuracy = 100 * correct / len(dataloader.dataset)
-    # print("Accuracy of the network : {:.3f}".format(accuracy))
-
-    # # accuracy_of_classes = []
-    # # for i in range(10):
-    # #     accuracy_of_class = 100 * class_correct[i] / class_total[i]
-    # #     accuracy_of_classes.append(accuracy_of_class)
-    # #     print("Accuracy of {} : {:.3f}".format(classes[i], accuracy_of_class))
-
-    return accuracy
+    return accuracy,test_loss/total_samples
 
 
 def train(net, trainloader, validloader, optimizer, criterion, writer, trial_num):
@@ -419,8 +182,6 @@ def train(net, trainloader, validloader, optimizer, criterion, writer, trial_num
     print("trial id : {}".format(trial_num))
 
     for epoch in range(args.epochs):  # loop over the dataset multiple times
-        train_loss = AverageMeter()
-        valid_loss = AverageMeter()
 
         for i, data in enumerate(trainloader, 0):
             # get the inputs; data is a list of [inputs, labels]
@@ -432,47 +193,43 @@ def train(net, trainloader, validloader, optimizer, criterion, writer, trial_num
             # forward + backward + optimize
 
             outputs = net(inputs.to(device))
-            loss = criterion(outputs, labels.squeeze().long().to(device))
-            loss.backward()
+            train_loss = criterion(outputs, labels.squeeze().long().to(device))
+            train_loss.backward()
             optimizer.step()
 
-            train_loss.update(loss.item(), args.batch_size)
+
             if i % 100 == 0:
-                print("train_loss: {}".format(train_loss.avg))
+                print("train_loss: {}".format(train_loss.item()))
 
         torch.save(net.state_dict(), args.output_path + "/checkpoint.pth.tar")
 
-        for i, data in enumerate(validloader, 0):
-            inputs, labels = data
-            outputs = net(inputs.to(device))
-            loss = criterion(outputs, labels.squeeze().long().to(device))
-            valid_loss.update(loss.item(), args.batch_size)
+        # for i, data in enumerate(validloader, 0):
+        #     inputs, labels = data
+        #     outputs = net(inputs.to(device))
+        #     validation_loss = criterion(outputs, labels.squeeze().long().to(device))
 
-        valid_accuracy = evaluate(net, validloader, "valid", trial_num, criterion)
+        valid_accuracy,validation_loss = evaluate(net, validloader, "valid", trial_num, criterion)
 
-        if valid_accuracy >= best_valid_accuracy:
-            best_valid_accuracy = valid_accuracy
-
-            # save best trained params
-            print("save best net at trial_num {}".format(trial_num))
-            torch.save(
+        # save best trained paramsclear
+        print("save best net at trial_num {}".format(trial_num))
+        torch.save(
                 net.state_dict(),
                 args.output_path + "/best_net_{:03}".format(trial_num) + ".pth.tar",
-            )
+        )
 
         print(
             "[{:03d} / {:03d}] train_loss, valid_loss, valid_accuracy : {:.3f}, {:.3f}, {:.3f}".format(
-                epoch + 1, args.epochs, train_loss.avg, valid_loss.avg, valid_accuracy
+                epoch + 1, args.epochs, train_loss, validation_loss, valid_accuracy
             )
         )
 
         if args.tensorboard:
             # writer.add_scalar('Loss/train', train_loss.avg, epoch)
             writer.add_scalars(
-                "Loss/train", {"trial_{:03d}".format(trial_num): train_loss.avg}, epoch
+                "Loss/train", {"trial_{:03d}".format(trial_num): train_loss}, epoch
             )
             writer.add_scalars(
-                "Loss/valid", {"trial_{:03d}".format(trial_num): valid_loss.avg}, epoch
+                "Loss/valid", {"trial_{:03d}".format(trial_num): validation_loss}, epoch
             )
             writer.add_scalars(
                 "Accuracy/valid",
@@ -482,34 +239,7 @@ def train(net, trainloader, validloader, optimizer, criterion, writer, trial_num
 
             writer.flush()
 
-    if args.tensorboard:
-        writer.add_scalars(
-            "Accuracy/valid/all",
-            {"trial_{:03d}".format(trial_num): best_valid_accuracy},
-            trial_num,
-        )
-
-        # for i in range(10):
-        #     writer.add_scalars(
-        #         "Accuracy/valid/classes",
-        #         {"trial_{:03d}".format(trial_num): valid_accuracy_of_classes[i]},
-        #         i,
-        #     )
-
-        writer.flush()
-
-    global best_accuracy
-    if best_valid_accuracy >= best_accuracy:
-        best_accuracy = best_valid_accuracy
-        global best_num
-        best_num = trial_num
-
-    print("best_valid_accuracy of this trial: {:.3f}".format(best_valid_accuracy))
-    print("best_accuracy of trials : {:.3f}".format(best_accuracy))
-    print("best_num of trials: {:.3f}".format(best_num))
-    print("Finished Training")
-
-    return best_valid_accuracy
+    return valid_accuracy
 
 
 def main():
@@ -529,8 +259,15 @@ def main():
     checkimages(test_loader, writer, mode="test")
 
     if args.optuna:
-        study = optuna.create_study(direction="maximize")
-        study = optuna.create_study(direction="maximize")
+        import logging
+        import sys
+
+
+        # Add stream handler of stdout to show the messages
+        optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
+        study_name = "example-study"  # Unique identifier of the study.
+        storage_name = "sqlite:///classifier-st.db".format(study_name)
+        study = optuna.create_study(study_name=study_name, storage=storage_name,direction="maximize")
         study.optimize(
             objective_variable(train_loader, test_loader, writer),
             n_trials=args.optuna_trialnum,
@@ -546,63 +283,46 @@ def main():
             df_records = df.to_dict(orient="records")
             for i in range(len(df_records)):
                 df_records[i]["datetime_start"] = df_records[i][
-                    "datetime_start"
-                ].strftime("%Y-%m-%d %H:%M:%S")
+                    "datetime_start"].strftime("%Y-%m-%d %H:%M:%S")
                 df_records[i]["datetime_complete"] = df_records[i][
-                    "datetime_complete"
-                ].strftime("%Y-%m-%d %H:%M:%S")
+                    "datetime_complete"].strftime("%Y-%m-%d %H:%M:%S")
                 value = df_records[i]["value"]
                 value_dict = {"value": value}
                 writer.add_hparams(df_records[i], value_dict)
 
-        else:
-            net = Net().to(device)
-            criterion = nn.CrossEntropyLoss()
-            optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-            train(
-                net, train_loader, test_loader, optimizer, criterion, writer, trial_num
-            )
-    best_net = Net().to(device)
-    best_net.load_state_dict(
-        torch.load(
-            args.path_of_results + "/best_net_{:03d}".format(best_num) + ".pth.tar"
-        )
-    )
-
-    # Read test data
-    dataiter = iter(test_loader)
-    images, labels = dataiter.next()
-    del dataiter
-
-    # Compare groundtruth to predicted
-    outputs = best_net(images.to(device))
-    _, predicted = torch.max(outputs, 1)
-    # print(
-    #     "GroundTruth: ",
-    #     " ".join("%5s" % classes[labels[j]] for j in range(args.batch_size)),
-    # )
-    # print(
-    #     "Predicted: ",
-    #     " ".join("%5s" % classes[predicted[j]] for j in range(args.batch_size)),
+    #     else:
+    #         net = Net().to(device)
+    #         criterion = nn.CrossEntropyLoss()
+    #         optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    #         train(
+    #             net, train_loader, test_loader, optimizer, criterion, writer, trial_num
+    #         )
+    # best_net = Net().to(device)
+    # best_net.load_state_dict(
+    #     torch.load(
+    #         args.path_of_results + "/best_net_{:03d}".format(best_num) + ".pth.tar"
+    #     )
     # )
 
-    # Evaluate
-    test_accuracy = evaluate(best_net, test_loader, "test", best_num, criterion)
-    print("Test accuracy of best net : {:.3f}".format(test_accuracy))
+    # # Read test data
+    # dataiter = iter(test_loader)
+    # images, labels = dataiter.next()
+    # del dataiter
 
-    if args.tensorboard:
-        writer.add_scalars(
-            "Accuracy/test/all",
-            {"trial_{:03d}".format(best_num): test_accuracy},
-            best_num,
-        )
+    # # Compare groundtruth to predicted
+    # outputs = best_net(images.to(device))
+    # _, predicted = torch.max(outputs, 1)
 
-        # for i in range(10):
-        #     writer.add_scalars(
-        #         "Accuracy/test/classes",
-        #         {"trial_{:03d}".format(trial_num): test_accuracy_of_classes[i]},
-        #         i,
-        #     )
+    # # Evaluate
+    # test_accuracy = evaluate(best_net, test_loader, "test", best_num, criterion)
+    # print("Test accuracy of best net : {:.3f}".format(test_accuracy))
+
+    # if args.tensorboard:
+    #     writer.add_scalars(
+    #         "Accuracy/test/all",
+    #         {"trial_{:03d}".format(best_num): test_accuracy},
+    #         best_num,
+    #     )
 
         writer.flush()
         writer.close()

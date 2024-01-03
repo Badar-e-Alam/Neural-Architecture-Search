@@ -222,7 +222,7 @@ def validate(model, val_loader, criterion, device):
             _, predicted = torch.max(outputs, 1)
             correct_preds += (predicted == labels).sum().item()
             total_samples += labels.size(0)
-    
+
     val_loss = running_loss / len(val_loader)
     val_accuracy = correct_preds / total_samples
 
@@ -230,11 +230,14 @@ def validate(model, val_loader, criterion, device):
 
 
 iteration = 0.0
+
+
 def normalize(x):
-    min_value=min(x)
-    max_value=max(x)
-    normalized = [(float(i)-min_value)/(max_value-min_value) for i in x]
+    min_value = min(x)
+    max_value = max(x)
+    normalized = [(float(i) - min_value) / (max_value - min_value) for i in x]
     return normalized
+
 
 def evaluateModel(sparcity_list):
     # optimization function
@@ -243,7 +246,9 @@ def evaluateModel(sparcity_list):
     criterion = nn.CrossEntropyLoss()
     pruned_model = insert_sparsity(resnet_model, sparsity_list=normalize(sparcity_list))
     optimizer = torch.optim.Adam(pruned_model.parameters(), lr=1e-2)
-    fitness_scr = calculate_fitness(pruned_model.to(device), sparsity_list=normalize(sparcity_list))
+    fitness_scr = calculate_fitness(
+        pruned_model.to(device), sparsity_list=normalize(sparcity_list)
+    )
     num_epochs = 1
 
     for epoch in range(num_epochs):
@@ -342,12 +347,12 @@ if __name__ == "__main__":
     for gen in range(NGEN):
         starttime = time.time()
         offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.1)
-        #offspring = [[float(gene) for gene in ind] for ind in offspring]
+        # offspring = [[float(gene) for gene in ind] for ind in offspring]
         # offspring_tensors = [torch.tensor(individual) for individual in offspring]
 
         # # Move offspring tensors to the same device as the model
         # offspring_tensors = [tensor.to(device) for tensor in offspring_tensors]
-                
+
         fits = pool(list(map(toolbox.evaluate, offspring)))
 
         endtime = time.time() - starttime
