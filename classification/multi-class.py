@@ -22,7 +22,12 @@ import json
 from hw_nas_bench_api.nas_201_models import get_cell_based_tiny_net
 
 # tensorboard --logdir=runs
-writer = SummaryWriter("classification/runs/multi-class")
+writer = SummaryWriter("runs/multi-class")
+
+# Hyperparameters
+batch_size = 256
+num_epochs = 100
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def make_model(path, num_classes):
@@ -44,7 +49,6 @@ def make_model(path, num_classes):
         if num_params > max_params:
             max_params = num_params
             selected_model = model
-    import pdb; pdb.set_trace()
     print("Selected model with max parameters: ", max_params)
     return selected_model
 
@@ -69,11 +73,6 @@ class Net(nn.Module):
         x = self.model(x)
         return x
 
-
-# Hyperparameters
-batch_size = 256
-num_epochs = 100
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def get_data():
@@ -117,7 +116,7 @@ def evaluate(model, dataloader, mode, trial_num, criterion):
         for batch_idx, (data, target) in tqdm.tqdm(enumerate(dataloader)):
             data, target = data.to(DEVICE), target.to(DEVICE)
             output = model(data)
-            test_loss += criterion(output[1], target.squeeze().long()).item()
+            test_loss += criterion(output[0], target.squeeze().long()).item()
             _, predicted_classes = torch.max(output[1], 1)  #
             output = F.softmax(output[1], dim=1)
             all_predictions.append(output.cpu().numpy())
@@ -151,14 +150,13 @@ def evaluate(model, dataloader, mode, trial_num, criterion):
         print(f"Total Accuracy: {accuracy:.2f}%")
         print(f"Total AUC: {auc:.2f}%")
         print(f"Total Loss: {test_loss / total_samples:.2f}%")
-        
+
     return accuracy, test_loss / total_samples, auc
 
 
-def train(model, device, train_loader, optimizer, epoch):
+def train(model, device, criterion, train_loader, optimizer, epoch):
     model.train()
     train_loss = 0
-    criterion = nn.CrossEntropyLoss()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -172,60 +170,37 @@ def train(model, device, train_loader, optimizer, epoch):
                 f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} "
                 f"({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}"
             )
+    writer.add_scalar("Training loss",train_loss/(batch_idx*batch_size),epoch)
     return train_loss // (batch_idx + 1)
 
 
 def main():
     train_loader, test_loader, train_loader_at_eval, n_classes = get_data()
     model = make_model("HW-NAS-Bench-v1_0.pickle", n_classes)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters())
     criterion = nn.CrossEntropyLoss()
-    print("Total Model parameters:", sum(p.numel() for p in model.parameters()))
+    schdeduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    resnet = torchvision.models.resnet50()
+    # Count parameters for resnet
+    resnet_params = sum(p.numel() for p in resnet.parameters())
+    print(f"Number of parameters in resnet: {resnet_params}")
 
-    print("Model Parameters:")
-    # for name ,param in model.named_parameters():
-    #     if param.requires_grad:
-    #         print(name,param.data.cpu().numpy())
-    # initial_params = {name: param.clone().detach().cpu().numpy() for name, param in model.named_parameters() if param.requires_grad}
-    # initial_all = np.concatenate([initial_params[name].flatten() for name in initial_params])
+    # Count parameters for model
+    model_params = sum(p.numel() for p in model.parameters())
+    print(f"Number of parameters in model: {model_params}")
+    resnet_percentage = (model_params / (resnet_params + model_params)) * 100
+    print(
+        f"Percentage of model parameters from ResNet: {resnet_percentage:.2f}%"
+    )
 
-    prev_params = None
+    for epoch in (range(1, num_epochs + 1)):
+        train(model, DEVICE,criterion, train_loader, optimizer, epoch)
+        if epoch %10==0:
+            accuracy, loss, auc = evaluate(model, test_loader, "train", epoch,
+                                       criterion)
+        writer.add_scalar("Learning_rate",optimizer.param_groups[0]["lr"])
+        schdeduler.step()
 
-    for epoch in range(1, num_epochs + 1):
-        train_loss = train(model, DEVICE, train_loader, optimizer, epoch)
-        # current_params = {name: param.clone().detach().cpu().numpy() for name, param in model.named_parameters() if param.requires_grad}
-        # print("ephch:",epoch)
-        # if prev_params is not None and epoch%10==0:
-        #     prev_all = np.concatenate([prev_params[name].flatten() for name in prev_params])
-        #     current_all = np.concatenate([current_params[name].flatten() for name in current_params])
-
-        #     fig, axs = plt.subplots(2, figsize=(12, 14))
-
-        #     axs[0].set_title("Previous Epoch Parameters")
-        #     axs[0].plot(prev_all, label="Previous Epoch")
-        #     axs[0].legend()
-
-        #     axs[1].set_title("Current Epoch Parameters")
-        #     axs[1].plot(current_all, label="Current Epoch")
-        #     axs[1].legend()
-
-        #     plt.show()
-        # elif epoch%4==0:
-        #     print("saving the last model parameters")
-        #     prev_params = current_params
-        # import pdb; pdb.set_trace()
-        # for name, param in model.named_parameters():
-        #     if param.requires_grad:
-        #         print(name, param.data.cpu().numpy())
-        accuracy, loss, auc = evaluate(model, test_loader, "train", epoch, criterion)
-        # writer.add_scalar("training loss", train_loss, epoch)
-        # writer.add_scalar("training accuracy", accuracy, epoch)
-        # writer.add_scalar("Test loss", loss, epoch)
-        # # accuracy,loss=evaluate(model, test_loader, "test", epoch, criterion)
-        # writer.add_scalar("testing AUC", auc, epoch)
-        # writer.add_scalar('testing loss',
-        #                     loss,
-        #                     epoch)
     writer.close()
 
 
